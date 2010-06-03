@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<product productid="network" active="1">
+	<title>vbNetwork</title>
+	<description>vBulletin Networks</description>
+	<version>0.9.6</version>
+	<url />
+	<versioncheckurl />
+	<dependencies>
+	</dependencies>
+	<codes>
+		<code version="0.9">
+			<installcode><![CDATA[$db->hide_errors();
+$db->query_write("CREATE TABLE IF NOT EXISTS  " . TABLE_PREFIX . "network (
+  `networkid` int(11) NOT NULL auto_increment,
+  `name` varchar(100) NOT NULL default '',
+  `admin` varchar(100) NOT NULL default '',
+  `selfid` varchar(100) NOT NULL default '',
+	`password` varchar(50) NOT NULL default '',
+  PRIMARY KEY  (`networkid`)
+);");
+
+$db->query_write("CREATE TABLE IF NOT EXISTS  " . TABLE_PREFIX . "network_node (
+  `network_nodeid` int(11) NOT NULL auto_increment,
+  `node_code` varchar(5) NOT NULL default '',
+  `networkid` int(11) NOT NULL default '0',
+  `node_url` mediumtext NOT NULL,
+  `node_service_url` mediumtext NOT NULL,
+  PRIMARY KEY  (`network_nodeid`)
+);");
+
+$db->query_write("CREATE TABLE IF NOT EXISTS " . TABLE_PREFIX . "network_sub (
+  `network_subid` int(11) NOT NULL auto_increment,
+  `subid` int(11) NOT NULL default '0',
+  `node_code` varchar(5) NOT NULL default '',
+  `networkid` int(11) NOT NULL default '0',
+  PRIMARY KEY  (`network_subid`)
+);");
+
+$db->query_write("ALTER TABLE " . TABLE_PREFIX . "thread ADD `network_thread_id` varchar(100) NOT NULL;");
+
+$db->query_write("ALTER TABLE " . TABLE_PREFIX . "forum ADD `networkid` int(11) NOT NULL, ADD `network_forum_id` int(11) NOT NULL;");
+
+$db->query_write("ALTER TABLE " . TABLE_PREFIX . "post ADD `networkuserid` INT( 10 ) NOT NULL;");
+
+$db->show_errors();]]></installcode>
+			<uninstallcode />
+		</code>
+		
+		<code version="0.9.1">
+			<installcode><![CDATA[$db->hide_errors();	
+$db->query_write("CREATE TABLE IF NOT EXISTS " . TABLE_PREFIX . "network_log (
+  network_logid int(11) NOT NULL auto_increment,
+  scriptname varchar(2048) NOT NULL,
+  dateline timestamp NOT NULL default CURRENT_TIMESTAMP,
+  message longtext NOT NULL,
+  networkname varchar(100) default NULL,
+  networknode varchar(100) default NULL,
+  remoteip varchar(100) NOT NULL,
+  loglevel int(11) NOT NULL,
+  PRIMARY KEY  (network_logid)
+);");]]></installcode>
+			<uninstallcode />
+		</code>
+
+	</codes>
+	<templates>
+	</templates>
+	<plugins>
+		<plugin active="1" executionorder="5">
+			<title>Forum Network Options</title>
+			<hookname>forumadmin_edit_form</hookname>
+			<phpcode><![CDATA[print_table_header($vbphrase['forum_network_options']);
+	$networkoptions = array('0' => $vbphrase['forum_not_networked']);
+	
+	$networks = $db->query_read("SELECT * FROM " . TABLE_PREFIX . "network");
+	while ($network = $db->fetch_array($networks))
+	{
+		$networkoptions[$network['networkid']] = $network['name'];
+	}
+	
+	print_select_row($vbphrase['forum_network_selection'], 'forum[networkid]', $networkoptions, $forum['networkid']);
+	print_input_row($vbphrase['forum_network_id'], 'forum[network_forum_id]', $forum['network_forum_id']);]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>Add Forum Network Fields to Object</title>
+			<hookname>forumdata_start</hookname>
+			<phpcode><![CDATA[$this->validfields['networkid'] = array(TYPE_INT, REQ_NO);
+
+$this->validfields['network_forum_id'] = array(TYPE_INT, REQ_NO);]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="1">
+			<title>New Post Complete</title>
+			<hookname>newpost_complete</hookname>
+			<phpcode><![CDATA[
+
+if ($foruminfo['networkid'] > 0 && !$post['preview'] && sizeof($errors) == 0)
+{
+	require_once('./network/functions_network.php');
+
+	$post['username'] = $vbulletin->userinfo['username'];
+	if ($type == 'thread')
+	{
+		$ret = que_createpost_packet($networkinfo,$foruminfo,$threadinfo,$post,'NEW_THREAD');
+	}
+	else
+	{
+		$ret = que_createpost_packet($networkinfo,$foruminfo,$threadinfo,$post,'NEW_POST');
+	}
+}
+
+]]></phpcode>
+		</plugin>
+		<plugin active="0" executionorder="5">
+			<title><![CDATA[vbNetwork: Add network avs and stuff if it's a network user and forum]]></title>
+			<hookname>postbit_display_complete</hookname>
+			<phpcode><![CDATA[if ($this->post['networkuserid'] > 0)
+{
+    $this->post['musername'] = '<a href="' . $post['remoteboardurl'] . '/member.php?u=' . $post['networkuserid'] . '">' . $this->post['musername'] . '</a>';
+    $template_hook['postbit_userinfo_left'] .= '<div class="smallfont">&nbsp;<br /><a href="' . $this->post['remoteboardurl'] . '/member.php?u='. $this->post['networkuserid'] . '"><img src="' . $this->post['remoteboardurl'] . '/image.php?u=' . $this->post['networkuserid'] . '" ' . $this->post[avwidth] . ' ' . $this->post[avheight] . 'border="0" /></a></div>';
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>vbNetwork postbit_display_start</title>
+			<hookname>postbit_display_start</hookname>
+			<phpcode><![CDATA[if ($this->forum['networkid'] > 0 && $this->post['userid'] == 0)
+{
+	global $db;
+	
+	$temp = split('@',$this->post['postusername']);
+	$nodecode = $temp[count($temp)-1];
+	
+	
+	if (strlen($nodecode) > 0)
+	{
+		$info = $db->query_first("SELECT * FROM " . TABLE_PREFIX . "network_node WHERE (node_code = '$nodecode') AND (networkid = '".($this->forum['networkid'])."');");
+		$this->post['remoteboardurl'] = $info['node_url'];
+	}
+}]]></phpcode>
+		</plugin>
+	</plugins>
+	<phrases>
+		<phrasetype name="Scheduled Tasks" fieldname="cron">
+			<phrase name="task_networkcron_desc" date="1162845667" username="Max Power" version="0.1" />
+			<phrase name="task_networkcron_log" date="1162845667" username="Max Power" version="0.1" />
+			<phrase name="task_networkcron_title" date="1162845667" username="Max Power" version="0.1"><![CDATA[vbNetwork Delivery]]></phrase>
+		</phrasetype>
+		<phrasetype name="Front-End Error Messages" fieldname="error">
+			<phrase name="vbn_node_already_exists" date="0" username="" version="0.1"><![CDATA[This messageboard code already exists in this network.]]></phrase>
+			<phrase name="vbn_removed_board_from_forum_successfully" date="0" username="" version="0.1"><![CDATA[The messageboard has been unsubscrubed from the network forum.]]></phrase>
+			<phrase name="vbn_network_forum_already_exists" date="0" username="" version="0.1"><![CDATA[This network forum already exists.]]></phrase>
+			<phrase name="vbn_unknown_messageboard" date="0" username="" version="0.1"><![CDATA[The node code you entered does not belong to any messageboard on this network.]]></phrase>
+			<phrase name="vbn_board_already_subscribed_to_network_forum" date="0" username="" version="0.1"><![CDATA[This messageboard is already subscribed to this network forum.]]></phrase>
+			<phrase name="invalid_subs_file_data" date="0" username="" version="0.1"><![CDATA[The subs data is not valid.]]></phrase>
+			<phrase name="saved_network_successfully" date="0" username="" version="0.1"><![CDATA[Network {1} saved successfully.]]></phrase>
+			<phrase name="vbn_invalid_boards_data" date="1163108124" username="Max Power" version="0.1"><![CDATA[You entered invalid board XML.]]></phrase>
+			<phrase name="vbn_invalid_network" date="0" username="" version="0.1"><![CDATA[You specified an invalid Network.]]></phrase>
+			<phrase name="vbn_invalid_network_info" date="0" username="" version="0.1"><![CDATA[You did not fill out all the network info.]]></phrase>
+			<phrase name="vbn_invalid_update_data" date="1163272000" username="Max Power" version="0.1"><![CDATA[There was a problem with the network data. Please try again.]]></phrase>
+			<phrase name="vbn_nothing_to_do" date="1163272573" username="Max Power" version="0.1"><![CDATA[Either no action was selected to be taken, or there were no boards selected to which to send updates. Please correct this problem and try again.]]></phrase>
+			<phrase name="vbn_password_fail" date="0" username="" version="0.1"><![CDATA[You entered an invalid password or password confirmation.]]></phrase>
+			<phrase name="vbn_updates_sent" date="1163272495" username="Max Power" version="0.1"><![CDATA[Network updates for {1} have been queued.]]></phrase>
+		</phrasetype>
+
+		<phrasetype name="GLOBAL" fieldname="global">
+			<phrase name="are_you_sure_you_want_to_delete_network_node_x" date="" username="" version="0.1"><![CDATA[Are you sure you want to delete this node?]]></phrase>
+			<phrase name="network_manager" date="0" username="" version=""><![CDATA[Network Manager]]></phrase>
+			<phrase name="vbn_network_form_manager" date="0" username="" version=""><![CDATA[Network Forum Manager]]></phrase>
+			<phrase name="add_new_network" date="0" username="" version=""><![CDATA[Add New Network]]></phrase>
+			<phrase name="forum_network_id" date="0" username="" version=""><![CDATA[Network Forum ID]]></phrase>
+			<phrase name="forum_network_options" date="0" username="" version=""><![CDATA[Network Options]]></phrase>
+			<phrase name="forum_network_selection" date="0" username="" version=""><![CDATA[Select a Network]]></phrase>
+			<phrase name="forum_not_networked" date="0" username="" version=""><![CDATA[Local forum (Not Networked)]]></phrase>
+			<phrase name="network_management" date="0" username="" version=""><![CDATA[Network Management]]></phrase>
+			<phrase name="vbn_update_password_text" date="0" username="" version="0.1"><![CDATA[Update Network Password]]></phrase>
+			<phrase name="vbn_urlphrase" date="0" username="" version="0.1"><![CDATA[Originally posted at [URL]{1}[/URL]]]></phrase>
+			<phrase name="vbn_created_network_successfully" date="1161992074" username="" version="0.1"><![CDATA[Created network successfully. Be sure to add your own board to the network with the same nodecode.]]></phrase>
+			<phrase name="vbn_deleted_network_successfully" date="1161992074" username="" version="0.1"><![CDATA[Deleted network successfully.]]></phrase>
+			
+			<phrase name="vbn_no_threads_to_sync" date="1161992074" username="" version="0.1"><![CDATA[There are no threads to sync.]]></phrase>
+			<phrase name="vbn_threads_synced_successfully" date="1161992074" username="" version="0.1"><![CDATA[Threads in this forum have been synced.]]></phrase>
+			
+		</phrasetype>
+		<phrasetype name="vBulletin Settings" fieldname="vbsettings">
+			<phrase name="setting_vbn_board_blacklist_desc" date="0" username="" version="0.1"><![CDATA[If you would like to block all posts from boards on a network, enter the node code and network name here, seperated by a comma. One entry code per line. (ie. ABT,BetaNet)]]></phrase>
+			<phrase name="setting_vbn_board_blacklist_title" date="0" username="" version="0.1"><![CDATA[Network Board Blacklist]]></phrase>
+			<phrase name="setting_vbn_errorlog_desc" date="0" username="" version="0.1"><![CDATA[Please enter the log level for vbNetwork (0 = Off, Default = 3). See documentation for details.]]></phrase>
+			<phrase name="setting_vbn_errorlog_title" date="0" username="" version="0.1"><![CDATA[Network Error Log Level]]></phrase>
+			<phrase name="setting_vbn_user_blacklist_desc" date="0" username="" version="0.1"><![CDATA[If you would like to block network posts from users on other boards, enter the username and network name here, seperated by a comma. One entry per line.
+
+(ie. TomUser,AlphaNet)]]></phrase>
+			<phrase name="setting_vbn_user_blacklist_title" date="0" username="" version="0.1"><![CDATA[Network User Blacklist]]></phrase>
+
+			<phrase name="settinggroup_vbnetwork" date="0" username="" version="0.9"><![CDATA[vbNetwork Options]]></phrase>
+
+			<phrase name="setting_vbn_autothread_title" date="0" username="" version="0.9"><![CDATA[Unknown Threads]]></phrase>
+			<phrase name="setting_vbn_autothread_desc" date="0" username="" version="0.9"><![CDATA[Automatically create new threads?]]></phrase>
+			
+			<phrase name="setting_vbn_allowpasswordcheck_title" date="0" username="" version="0.9"><![CDATA[Allow Network Password Checks]]></phrase>
+			<phrase name="setting_vbn_allowpasswordcheck_desc" date="0" username="" version="0.9"><![CDATA[Allow service to validate password requests? (Should be used for debugging purposes only.)]]></phrase>
+			
+			<phrase name="setting_vbn_check_user_email_title" date="0" username="" version="0.9"><![CDATA[Check Network User Emails]]></phrase>
+			<phrase name="setting_vbn_check_user_email_desc" date="0" username="" version="0.9"><![CDATA[This option attempts to match posts from network users to local users by email.]]></phrase>
+		</phrasetype>
+	</phrases>
+	<options>
+		<settinggroup name="vbnetwork" displayorder="65535">
+			<setting varname="vbn_user_blacklist" displayorder="10">
+				<datatype>free</datatype>
+				<optioncode>textarea</optioncode>
+			</setting>
+			<setting varname="vbn_board_blacklist" displayorder="20">
+				<datatype>free</datatype>
+				<optioncode>textarea</optioncode>
+			</setting>
+			
+			<setting varname="vbn_check_user_email" displayorder="50">
+				<datatype>free</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>no</defaultvalue>
+			</setting>			
+
+			<setting varname="vbn_allowpasswordcheck" displayorder="70">
+				<datatype>free</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>no</defaultvalue>
+			</setting>
+			
+			<!--<setting varname="vbn_autothread" displayorder="80">
+				<datatype>free</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>no</defaultvalue>
+			</setting>-->
+			
+			<setting varname="vbn_errorlog" displayorder="90">
+				<datatype>free</datatype>
+				<defaultvalue>3</defaultvalue>
+			</setting>			
+			
+		</settinggroup>
+	</options>
+	<helptopics>
+	</helptopics>
+	<cronentries>
+		<cron varname="networkcron" active="0" loglevel="0">
+			<filename>./network/deliver.php</filename>
+			<scheduling weekday="-1" day="-1" hour="-1" minute="-1" />
+		</cron>
+	</cronentries>
+	<faqentries>
+	</faqentries>
+</product>

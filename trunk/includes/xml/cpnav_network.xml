@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<navgroups product="network" master="true">
+	<navgroup phrase="network_management" permissions="canadminstyles" displayorder="15">
+	
+		<navoption displayorder="10">
+			<phrase>network_manager</phrase>
+			<link>network.php?do=modify</link>
+		</navoption>
+
+		<navoption displayorder="20">
+			<phrase>vbn_network_form_manager</phrase>
+			<link>networkforum.php</link>
+		</navoption>
+
+		<navoption displayorder="30">
+			<phrase>add_new_network</phrase>
+			<link>network.php?do=add</link>
+		</navoption>
+	
+	</navgroup>
+</navgroups>	
