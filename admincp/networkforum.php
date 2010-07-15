@@ -263,7 +263,7 @@ if ($_REQUEST['do'] == 'list')
 					));
 
 			$networkforums = $db->query("
-				SELECT DISTINCT subid FROM " . TABLE_PREFIX . "network_sub
+				SELECT DISTINCT subid FROM " . TABLE_PREFIX . "network_sub AS network_sub
 				WHERE (network_sub.networkid = ".$network['networkid'].")
 				ORDER BY subid
 				");
@@ -295,8 +295,8 @@ if ($_REQUEST['do'] == 'list')
 					));
 					
 					$forumsnodes = $db->query("
-						SELECT * FROM " . TABLE_PREFIX . "network_sub
-						LEFT JOIN " . TABLE_PREFIX . "network_node 
+						SELECT * FROM " . TABLE_PREFIX . "network_sub AS network_sub
+						LEFT JOIN " . TABLE_PREFIX . "network_node AS network_node
 								ON (network_sub.node_code = network_node.node_code) 
 								AND (network_sub.networkid = network_node.networkid)
 						WHERE (network_sub.networkid = ".$network['networkid'].") AND (subid = ".$forum['subid'].")
