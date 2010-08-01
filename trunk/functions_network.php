@@ -317,7 +317,6 @@ function package_packet($networkinfo,$xml,$toarray)
 		$xmlstr = "";			
 		if (!file_exists($workingfile))
 		{
-			$xmlstr = "<?xml version=\"1.0\" encoding=\"windows-1252\" ?>\n";
 			$xmlstr = "<package networkname='".(strtolower($networkinfo['name']))."'>\n";
 			$xmlstr .= $xml->output();
 			$xmlstr .= "</package>";
@@ -346,6 +345,7 @@ function package_packet($networkinfo,$xml,$toarray)
 			unlink($workingfile);
 		
 		$fh = fopen($workingfile, 'w');
+        fwrite($fh,"<?xml version=\"1.0\" encoding=\"windows-1252\" ?>\n");
 		fwrite($fh, $xmlstr);
 		fclose($fh);		
 	}	
