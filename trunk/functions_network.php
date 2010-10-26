@@ -642,7 +642,7 @@ function process_incoming_package($networkname)
 							if ($theuserid > 0)
 								$postdm->set('userid', $theuserid);
 							else
-								$postdm->set('username', $fromusername);
+								$postdm->set('username', fetch_censored_text($fromusername));
 							
 							$postdm->pre_save();
 							if (count($postdm->errors) > 0)
