@@ -494,7 +494,7 @@ function newThread($networkinfo,$packet, $origininfo,$fromusername)
 		if ($theuserid > 0)
 			$threaddm->do_set('userid', $theuserid);
 		else
-			$threaddm->do_set('username', $fromusername);		
+			$threaddm->do_set('username', fetch_censored_text($fromusername));		
 		
 		$threaddm->pre_save();		
 		
