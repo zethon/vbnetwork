@@ -471,6 +471,8 @@ function newThread($networkinfo,$packet, $origininfo,$fromusername)
 		$forumid = $foruminfo['forumid'];
 		$pagetext = fetch_pagetext($packet['data']['pagetext'],$foruminfo['forumid'],$origininfo);
 		$title = (strlen($packet['data']['title']) > 0) ? $packet['data']['title'] : '(Unknown Network Thread: '.$packet['data']['network_thread_id'].')';
+		$title = htmlspecialchars_decode($title);
+				
 		$allowsmilie = '1';
 		$visible = '1';
 		$dateline = $packet['data']['dateline'];
