@@ -314,6 +314,17 @@ function package_packet($networkinfo,$xml,$toarray)
 
 		$workingfile = strtolower('./network/packets/outgoing/'.$networkinfo['name'].".".$node.".xml");		
 		
+		if (file_exists($workingfile))
+		{
+			// test the outgoing packet to see if it's corrupt
+			// and delete it if it's not			
+			$testobj = new XMLparser(false, $workingfile);
+			if (!$testpackage = $testobj->parse())
+			{
+				unlink($workingfile);
+			}
+		}
+		
 		$xmlstr = "";			
 		if (!file_exists($workingfile))
 		{
@@ -324,15 +335,6 @@ function package_packet($networkinfo,$xml,$toarray)
 		}
 		else
 		{
-			// test the outgoing packet to see if it's corrupt
-			// and delete it if it's not			
-			$testobj = new XMLparser(false, $workingfile);
-			if (!$testpackage = $testobj->parse())
-			{
-				unlink($workingfile);
-				return;
-			}
-						
 			// read the current data
 			$file = fopen($workingfile,'r');
 			$fdata = fread($file,filesize($workingfile));
