@@ -40,9 +40,9 @@ class vb_Networklog
 					(scriptname,message,networkname,networknode,remoteip,loglevel) 
 					VALUES
 					('$_SERVER[SCRIPT_FILENAME]','%s','%s','%s','$_SERVER[REMOTE_ADDR]',$loglevel)",
-					mysql_real_escape_string($message),
-					mysql_real_escape_string($networkname),
-					mysql_real_escape_string($networknode)));
+					$vbulletin->db->escape_string($message),
+					$vbulletin->db->escape_string($networkname),
+					$vbulletin->db->escape_string($networknode)));
 		}
 	}
 	

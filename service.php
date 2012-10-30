@@ -68,7 +68,7 @@ switch ($action)
 			$networkinfo = $db->query_first(sprintf("SELECT * 
 														FROM " . TABLE_PREFIX . "network 
 														WHERE (name = '%s')",
-														mysql_real_escape_string($networkname))											
+														$vbulletin->db->escape_string($networkname)											
 														);
 														
 			if ($networkinfo['networkid'] <= 0)
@@ -108,7 +108,7 @@ switch ($action)
 		$networkinfo = $db->query_first(sprintf("SELECT * 
 													FROM " . TABLE_PREFIX . "network 
 													WHERE (name = '%s')",
-													mysql_real_escape_string($networkname))											
+													$vbulletin->db->escape_string($networkname)											
 													);
 													
 		if ($networkinfo['networkid'] <= 0)
@@ -136,7 +136,7 @@ switch ($action)
 													FROM " . TABLE_PREFIX . "network_node 
 													WHERE (networkid = '".$networkinfo['networkid']."') 
 													AND (node_code = '%s')",
-													mysql_real_escape_string($requester))													
+													$vbulletin->db->escape_string($requester)													
 													);
 													
 		if ($requesterinfo['network_nodeid'] <= 0)
