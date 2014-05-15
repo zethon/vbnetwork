@@ -653,9 +653,13 @@ function process_incoming_package($networkname)
 							
 							$theuserid = fetch_userid_from_email($packet['data']['email']);
 							if ($theuserid > 0)
+							{
 								$postdm->set('userid', $theuserid);
+							}
 							else
+							{
 								$postdm->set('username', fetch_censored_text($fromusername));
+							}
 							
 							$postdm->pre_save();
 							if (count($postdm->errors) > 0)
