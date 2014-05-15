@@ -546,7 +546,7 @@ function fix_username($username,$nodecode)
 	}
 	
 	require_once(DIR . '/includes/functions_search.php');
-	$tempname = sanitize_word_for_sql($username . '@' . $nodecode);
+	$tempname = htmlspecialchars_decode(sanitize_word_for_sql($username . '@' . $nodecode));
 	
 	if ($db->query_first("SELECT userid FROM " . TABLE_PREFIX . "user WHERE username = '$tempname'"))
 	{
